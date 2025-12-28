@@ -1,0 +1,137 @@
+Backtracking Algorithm for Map coloring CSP
+
+#Haritayı tanımlama:
+neighbors = { 'A': ['B','C'], 
+              'B': ['A','C','D'], 
+              'C': ['A', 'B', 'D', 'E'], 
+              'D': ['B', 'C', 'E'], 
+              'E': ['C', 'D'] }
+
+#Renk listesini tanımla
+colors =['Red', 'Green', 'Blue']
+
+#bölgeye atanan renk tutarlı mı kontrol et
+def is_consistent(region, color, assignment):
+    for neighbor in neighbors[region]:
+        if neighbor  in assignment and assignment[neighbor] == color:
+            return False
+        return True  
+
+#Geriye dönük algoritma
+def backtrack(assignment):
+    #eğer tüm değerler atandıysa sonucu döndür.
+    if len(assignment) == len(neighbors):
+        return assignment
+
+    #bir sonraki atanmamış bölgeyi seç:
+    unassigned =[r for r in neighbors.keys() if r not in assignment]
+    region = unassigned[0]
+
+    #her renk için dene:
+    for color in colors:
+        if is_consistent(region, color, assignment):
+            assignment[region] =color
+            print(f"Assign {region} = {color} -> {assignment}")
+
+            result = backtrack(assignment)
+            if result:
+                return result
+
+            #backtrack
+            print(f"Backtrack on {region}")
+            del assignment[region]
+
+    return None
+
+
+
+#ileri kontrol algortiması
+
+
+#Algoratimayı çalıştır
+solution = backtrack({})
+print("\nFinal Solution:", solution)
+
+# Haritayı (bölgeler ve komşuluk ilişkileri) tanımlama
+Neighbors = {
+    'A': ['B', 'C'],
+    'B': ['A', 'C', 'D'],
+    'C': ['A', 'B', 'D', 'E'],
+    'D': ['B', 'C', 'E'],
+    'E': ['C', 'D']
+}
+
+# Kullanılabilecek renklerin listesi
+Colors = ['Red', 'Green', 'Blue']
+
+def forward_checking_solver(Assignment, Domains):
+    """
+    İleri Kontrol kullanarak harita boyama problemini özyinelemeli (recursive) olarak çözer.
+    """
+    # Temel Durum: Eğer tüm bölgelere renk atandıysa, çözüm bulunmuştur.
+    if len(Assignment) == len(Neighbors):
+        return Assignment
+
+    # Adım 1: Henüz renk atanmamış bir bölge seç
+    Unassigned_region = None
+    for Region in Neighbors:
+        if Region not in Assignment:
+            Unassigned_region = Region
+            break
+
+    # Adım 2: Seçilen bölge için olası her rengi sırayla dene
+    for Color in Domains[Unassigned_region]:
+        print(f"\n-> Deneme: {Unassigned_region} için '{Color}' rengi deneniyor.")
+        
+        # O anki atamayı yap
+        Assignment[Unassigned_region] = Color
+        
+        # Adım 3: ileri kontrol aşaması
+        Domains_copy = {k: list(v) for k, v in Domains.items()}
+        
+        Is_consistent = True
+        # Seçtiğimiz bölgenin tüm komşularını gez
+        for Neighbor in Neighbors[Unassigned_region]:
+            # Eğer komşuya henüz renk atanmadıysa
+            if Neighbor not in Assignment:
+                # Komşunun domain'inden şu an denediğimiz rengi çıkar
+                if Color in Domains_copy[Neighbor]:
+                    Domains_copy[Neighbor].remove(Color)
+                    print(f"İleri Kontrol: '{Neighbor}' bölgesinin seçeneklerinden '{Color}' silindi. Kalanlar: {Domains_copy[Neighbor]}")
+
+                # eğer komşunun seçeneği kalmadıysa bu bir çıkmaz sokaktır
+                if not Domains_copy[Neighbor]:
+                    print(f"Hata: {Unassigned_region} = '{Color}' ataması, '{Neighbor}' bölgesini renksiz bıraktı. Bu yol başarısız.")
+                    Is_consistent = False
+                    break # Diğer komşulara bakmaya gerek yok, hemen bu döngüden çık.
+        
+        # Adım 4: Özyinelemeli (Recursive) Çağrı
+        if Is_consistent:
+            Result = forward_checking_solver(Assignment, Domains_copy)
+            # Eğer çözüm bulunduysa, onu yukarı doğru geri döndür
+            if Result is not None:
+                return Result
+        
+        # Adım 5: geri alma (backtrack)
+        # Eğer bu noktaya geldiysek, denediğimiz renk bir çözüme ulaştırmadı demektir.
+        # Yaptığımız atamayı geri al ve döngünün bir sonraki rengini dene.
+        print(f"<- Geri Alma: {Unassigned_region} için yapılan '{Color}' ataması geri alınıyor.")
+        del Assignment[Unassigned_region]
+
+    # Eğer döngüdeki tüm renkler denendiği halde çözüm bulunamadıysa, None döndür.
+    return None
+
+# Algoritmayı Başlatma
+
+# Başlangıçta her bölgenin tüm renkleri seçme hakkı var (başlangıç domain'leri)
+Initial_domains = {Region: list(Colors) for Region in Neighbors}
+
+print("İleri Kontrol ile Çözüm Süreci Başlıyor...")
+# Algoritmayı boş bir atama listesi ve başlangıç domain'leri ile başlat
+Solution = forward_checking_solver({}, Initial_domains)
+
+# Nihai çözümü ekrana yazdır
+if Solution:
+    print("Çözüm Bulundu:", Solution)
+else:
+    print("Bu koşullarla bir çözüm bulunamadı.")
