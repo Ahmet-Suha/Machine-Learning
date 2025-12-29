@@ -1,0 +1,54 @@
+#Bu çalışmadaki veri seti Kaggle üzerinden alınmıştır.
+import pandas as pd
+import numpy as np
+from scipy import stats
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
+
+df = pd.read_csv( r'C:\Users\ashme\Desktop\python examples\Salary_Data.csv' ) 
+df.head( )
+
+df.isnull()
+
+#%70 üzerinde null değer içeren kolonları sil
+tr = len(df) * .3
+df.dropna(thresh = tr, axis = 1, inplace = True)
+
+df
+
+#Education Level özniteliğinin Null değerlerini Education Level özniteliğinin ilk değeri ile doldurma
+df['Education Level'] = df['Education Level'].fillna(df['Education Level'].unique()[0])
+
+#Job Title özniteliğinin Null değerlerini Job Title özniteliğinin ilk değeri ile doldurma
+df['Job Title'] = df['Job Title'].fillna(df['Job Title'].unique()[0])
+
+print (df)
+
+z_scores = stats.zscore(df['Age']) 
+outliers = abs(z_scores) > 3
+df_no_outliers = df[~outliers]
+
+from sklearn.preprocessing import LabelEncoder
+label_encode = LabelEncoder()
+#df.iloc[:,1] = label_encode.fit_transform(df.iloc[:,1])
+df['Gender'] = label_encode.fit_transform(df['Gender'])
+df
+
+#label_encode = LabelEncoder()
+#df.iloc[:,2] = label_encode.fit_transform(df.iloc[:,2])
+df['Education Level'] = label_encode.fit_transform(df['Education Level'])
+df
+
+df['Salary'] = (df['Salary'] - df['Salary'].min()) / (df['Salary'].max() - df['Salary'].min())
+print (df)
+
+from sklearn.preprocessing import StandardScaler
+#scaler = StandardScaler()
+#df_scaled = scaler.fit_transform(df[['Age','Years of Experience']])
+#df = pd.DataFrame(df_scaled, columns=df.columns)
+#df
+
+cols_to_scale = ['Age', 'Years of Experience']
+scaler = StandardScaler()
+df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale])
+#bu sütunları ölçekle ve sonucu doğrudan aynı sütunların üzerine yaz
+df
