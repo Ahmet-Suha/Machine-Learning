@@ -1,0 +1,111 @@
+import pandas as pd
+from collections import defaultdict, Counter
+import math
+
+# Data seti tanımlayalım:
+import pandas as pd
+
+#Özellikler (X): boy, kilo, ayak_no, cinsiyet
+data = [
+    ("Orta", "Orta", "Orta", "Kadın"),
+    ("Kısa", "Düşük", "Küçük", "Kadın"),
+    ("Uzun", "Yüksek", "Büyük", "Erkek"),
+    ("Uzun", "Orta", "Büyük", "Erkek"),
+    ("Orta", "Orta", "Orta", "Erkek"),
+    ("Kısa", "Orta", "Küçük", "Kadın"),
+    ("Orta", "Yüksek", "Orta", "Erkek"),
+    ("Uzun", "Yüksek", "Büyük", "Kadın"),
+    ("Kısa", "Düşük", "Küçük", "Erkek"),
+    ("Orta", "Orta", "Büyük", "Erkek"),
+    ("Uzun", "Orta", "Orta", "Kadın"),
+    ("Kısa", "Orta", "Orta", "Kadın"),
+    ("Orta", "Düşük", "Küçük", "Kadın"),
+    ("Uzun", "Yüksek", "Büyük", "Erkek"),
+    ("Orta", "Yüksek", "Orta", "Kadın"),
+    ("Uzun", "Orta", "Büyük", "Erkek"),
+    ("Kısa", "Orta", "Küçük", "Erkek"),
+    ("Orta", "Orta", "Orta", "Kadın"),
+]
+
+#Veri setini pandas DataFrame'e dönüştürme
+df = pd.DataFrame(data, columns=["Boy", "Kilo", "AyakNo", "Cinsiyet"])
+
+# Veri setini göster
+print("Veri Seti (18 rows)")
+print(df.to_string(index=False))
+
+
+
+# Naive Bayes ile kategorik eğitim:
+classes = df['Cinsiyet'].unique().tolist()
+features = ["Boy", "Kilo", "AyakNo"]
+alpha = 1  # Laplace düzeltmesi
+
+priors_counts = df['Cinsiyet'].value_counts().to_dict()
+total = len(df)
+priors = {c: priors_counts.get(c,0)/total for c in classes}
+
+# Koşullu olasılıkları hesapla:
+cond_counts = {c: {f: defaultdict(int) for f in features} for c in classes}
+class_counts = Counter(df['Cinsiyet'])
+for _, row in df.iterrows():
+    cls = row['Cinsiyet']
+    for f in features:
+        cond_counts[cls][f][row[f]] += 1
+
+feature_values = {f: sorted(df[f].unique().tolist()) for f in features}
+cond_probs = {c: {f: {} for f in features} for c in classes}
+
+for c in classes:
+    for f in features:
+        V = len(feature_values[f])
+        for val in feature_values[f]:
+            count = cond_counts[c][f].get(val, 0)
+            cond_probs[c][f][val] = (count + alpha) / (class_counts[c] + alpha*V)
+
+# Öncülleri göster
+print("\nÖncüller")
+for c in classes:
+    print(f"P({c}) = {priors[c]:.3f}")
+
+# Koşullu olasılıkları gösterme:
+print("\nKoşullu olasılıklar P(feature=value | class)")
+for c in classes:
+    print(f"\nClass = {c}")
+    for f in features:
+        for val in feature_values[f]:
+            print(f"  P({f}={val} | {c}) = {cond_probs[c][f][val]:.3f}")
+
+# Yeni bir öğrenim sınıflama:
+test = {"Boy":"orta", "Kilo":"orta", "AyakNo":"orta"}
+print("\nYeni öğrenim sınıf")
+print(f"Test instance:", test)
+
+scores = {}
+#for c in classes:
+score = math.log(priors[c])
+#    for f in features:
+#       p = cond_probs[c][f].get(test[f], 0)
+#        score += math.log(p)
+#    scores[c] = score
+
+for f in features:
+        # 1. Değeri sözlükte ara, bulamazsan 'None' dönsün (varsayılan 0'ı kaldır)
+        p = cond_probs[c][f].get(test[f]) 
+        
+        if p is None:
+            # 2. EĞER DEĞER BULUNAMADIYSA (eğitimde görülmemişse):
+            # 'count=0' için Laplace olasılığını elle hesapla
+            V = len(feature_values[f])
+            p = (0 + alpha) / (class_counts[c] + alpha * V)
+            
+        # 3. Artık 'p' hiçbir zaman 0 olamaz, logaritmayı güvenle alabilirsin
+        score += math.log(p)
+scores[c] = score
+
+print("\nLog-Skor")
+for c, score in scores.items():
+    print(f"Class {c}: {score:.4f}")
+
+predicted = max(scores.items(), key=lambda x: x[1])[0]
+print(f"\nPredicted class:", predicted)
