@@ -1,0 +1,67 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
+import random
+
+
+random_seed = 42
+np.random.seed(random_seed)
+random.seed(random_seed)
+
+N = 100  # number of samples
+hours = np.random.uniform(0, 10, size=N)
+true_slope = 5.0 
+true_intercept = 30.0 
+noise_sigma = 8.0 
+
+scores = true_intercept + true_slope * hours + np.random.normal(0, noise_sigma, size=N)
+
+
+X = hours.reshape(-1, 1)
+y = scores  # target variable
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_seed)
+
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+
+learned_slope = model.coef_[0]
+learned_intercept = model.intercept_
+
+print("Learned slope (coefficient):", learned_slope)
+print("Learned intercept:", learned_intercept)
+
+
+y_pred = model.predict(X_test)
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Absolute Error on test set: {mae:.3f}")
+print(f"R^2 on test set: {r2:.3f}")
+
+
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, alpha=0.6, label='Data (hours vs. score)')
+
+hours_line = np.linspace(X.min(), X.max(), 100).reshape(-1, 1)
+scores_line = model.predict(hours_line)
+plt.plot(hours_line, scores_line, linewidth=2, label='Learned linear regression')
+
+true_line = true_intercept + true_slope * hours_line
+plt.plot(hours_line, true_line, linestyle='--', linewidth=1.5, label='True underlying relationship')
+plt.xlabel('Hours studied')
+plt.ylabel('Exam score')
+plt.title('Linear Regression: Hours studied -> Exam score')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+new_hours = np.array([[7.5]])  # e.g., student studied 7.5 hours
+predicted_score = model.predict(new_hours)[0]
+print(f"Predicted score for {new_hours[0,0]} hours studied: {predicted_score:.2f}")
