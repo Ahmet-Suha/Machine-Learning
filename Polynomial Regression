@@ -1,0 +1,94 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
+import random
+
+
+random_seed = 42
+np.random.seed(random_seed)
+random.seed(random_seed)
+
+N = 150  # number of samples
+hours = np.random.uniform(0, 12, size=N)  # study hours from 0 to 12
+
+
+true_intercept = 40.0
+true_coeffs = (6.0, -0.4, 0.02)  # linear, quadratic, cubic coefficients for synthetic generation
+noise_sigma = 6.0
+
+scores = (true_intercept
+          + true_coeffs[0] * hours
+          + true_coeffs[1] * (hours ** 2)
+          + true_coeffs[2] * (hours ** 3)
+          + np.random.normal(0, noise_sigma, size=N))
+
+
+X = hours.reshape(-1, 1)
+y = scores
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_seed)
+
+
+degree = 3
+pipeline = Pipeline([
+    ('poly', PolynomialFeatures(degree=degree, include_bias=False)),
+    ('scaler', StandardScaler()),
+    ('linreg', LinearRegression())
+])
+
+
+pipeline.fit(X_train, y_train)
+
+
+linreg = pipeline.named_steps['linreg']
+poly_transformer = pipeline.named_steps['poly']
+feature_names = poly_transformer.get_feature_names_out(['hours'])
+learned_coefs = linreg.coef_
+learned_intercept = linreg.intercept_
+
+print("Polynomial features used:", feature_names)
+print("Learned coefficients (for each polynomial feature):")
+for name, coef in zip(feature_names, learned_coefs):
+    print(f"  {name}: {coef:.4f}")
+print(f"Learned intercept: {learned_intercept:.4f}")
+
+
+y_pred = pipeline.predict(X_test)
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"\nEvaluation on test set:")
+print(f"  Mean Absolute Error (MAE): {mae:.3f}")
+print(f"  R^2 score: {r2:.3f}")
+
+
+hours_grid = np.linspace(X.min(), X.max(), 400).reshape(-1, 1)
+predicted_grid = pipeline.predict(hours_grid)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, alpha=0.6, label='Data (hours vs. score)')
+plt.plot(hours_grid, predicted_grid, linewidth=2, label=f'Polynomial regression (degree={degree})')
+
+
+true_curve = (true_intercept
+              + true_coeffs[0] * hours_grid.ravel()
+              + true_coeffs[1] * (hours_grid.ravel() ** 2)
+              + true_coeffs[2] * (hours_grid.ravel() ** 3))
+
+plt.plot(hours_grid, true_curve, linestyle='--', linewidth=1.5, label='True underlying curve (no noise)')
+plt.xlabel('Hours studied')
+plt.ylabel('Exam score')
+plt.title(f'Polynomial Regression (degree={degree}): Hours studied -> Exam score')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+new_hours = np.array([[8.0]])  # e.g., 8 hours of study
+predicted_score = pipeline.predict(new_hours)[0]
+print(f"\nPredicted score for {new_hours[0,0]} hours studied: {predicted_score:.2f}")
